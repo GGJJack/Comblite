@@ -17,16 +17,11 @@ Pod::Spec.new do |s|
 #   * Write the description between the DESC delimiters below.
 #   * Finally, don't worry about the indent, CocoaPods strips it!
 
-  s.description      = <<-DESC
-  Comblite is Combine + Sqlite wrapping library for Swift.
-  
-                       DESC
-
-  s.homepage         = 'https://github.com/ggaljjak/Comblite'
+  s.homepage         = 'https://github.com/GGJJack/Comblite'
   # s.screenshots     = 'www.example.com/screenshots_1', 'www.example.com/screenshots_2'
   s.license          = { :type => 'MIT', :file => 'LICENSE' }
   s.author           = { 'ggaljjak' => 'ggaljjak.choi@gmail.com' }
-  s.source           = { :git => 'https://github.com/ggaljjak/Comblite.git', :tag => s.version.to_s }
+  s.source           = { :git => 'https://github.com/GGJJack/Comblite.git', :tag => s.version.to_s }
   # s.social_media_url = 'https://twitter.com/<TWITTER_USERNAME>'
 
   s.ios.deployment_target = '13.0'
