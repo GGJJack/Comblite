@@ -5,6 +5,8 @@
 [![License](https://img.shields.io/cocoapods/l/Comblite.svg?style=flat)](https://cocoapods.org/pods/Comblite)
 [![Platform](https://img.shields.io/cocoapods/p/Comblite.svg?style=flat)](https://cocoapods.org/pods/Comblite)
 
+Comblite is Combine + Sqlite wrapping library for Swift.
+
 ## Requirements
 
 - Platform : iOS 13.0+
