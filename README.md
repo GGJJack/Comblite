@@ -1,6 +1,5 @@
 # Comblite
 
-[![CI Status](https://img.shields.io/travis/ggaljjak/Comblite.svg?style=flat)](https://travis-ci.org/ggaljjak/Comblite)
 [![Version](https://img.shields.io/cocoapods/v/Comblite.svg?style=flat)](https://cocoapods.org/pods/Comblite)
 [![License](https://img.shields.io/cocoapods/l/Comblite.svg?style=flat)](https://cocoapods.org/pods/Comblite)
 [![Platform](https://img.shields.io/cocoapods/p/Comblite.svg?style=flat)](https://cocoapods.org/pods/Comblite)
@@ -69,7 +68,7 @@ comblite.exec("CREATE TABLE User (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEX
     .sink { completion in
         switch completion {
         case .failure(let err):
-            print("Failed \(err.localizedDescription)")
+            print("Failed \(err)")
             break
         case .finished:
             print("Table created")
@@ -88,7 +87,7 @@ comblite.insert("INSERT INTO User (name) VALUES (?)", args: ["Jack"])
     .sink { completion in
         switch completion {
         case .failure(let err):
-            print("Failed \(err.localizedDescription)")
+            print("Failed \(err)")
             break
         case .finished:
             print("User inserted")
@@ -109,7 +108,7 @@ comblite.query("SELECT * FROM User")
     .sink { completion in
         switch completion {
         case .failure(let err):
-            print("Failed \(err.localizedDescription)")
+            print("Failed \(err)")
             break
         case .finished:
             print("User inserted")
@@ -144,7 +143,7 @@ comblite.query("SELECT * FROM User")
     .sink { completion in
         switch completion {
         case .failure(let err):
-            print("Failed \(err.localizedDescription)")
+            print("Failed \(err)")
             break
         case .finished:
             print("User inserted")
@@ -167,7 +166,7 @@ comblite.singleInt("SELECT COUNT(*) FROM User")
     .sink { completion in
         switch completion {
         case .failure(let err):
-            print("Failed \(err.localizedDescription)")
+            print("Failed \(err)")
             break
         case .finished:
             print("User inserted")
@@ -188,7 +187,7 @@ comblite.run("DELETE FROM User WHERE id = ?", args: [0])
     .sink { completion in
         switch completion {
         case .failure(let err):
-            print("Failed \(err.localizedDescription)")
+            print("Failed \(err)")
             break
         case .finished:
             print("User inserted")
@@ -227,7 +226,7 @@ class CombliteHelper: CombliteDelegate {
         .sink { completion in
             switch completion {
             case .failure(let err):
-                print("Failed \(err.localizedDescription)")
+                print("Failed \(err)")
                 break
             case .finished:
                 print("Table created")
@@ -244,7 +243,7 @@ class CombliteHelper: CombliteDelegate {
                 .sink { completion in
                     switch completion {
                     case .failure(let err):
-                        print("Failed \(err.localizedDescription)")
+                        print("Failed \(err)")
                         break
                     case .finished:
                         print("Table altered")
@@ -256,7 +255,7 @@ class CombliteHelper: CombliteDelegate {
     }
     
     func onError(_ comblite: Comblite, error: CLError) {
-        print("Handle Error Here : \(error.localizedDescription)")
+        print("Handle Error Here : \(error)")
     }
     
     func loadUserList() -> Future<[User], CLError> { comblite.query("SELECT * FROM User") }

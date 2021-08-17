@@ -38,7 +38,7 @@ class ViewController: UIViewController {
     }
     
     func exampleForBasicUse() {
-        let comblite = Comblite("path/To/Database.sqlite3")
+        let comblite = Comblite("path/To/Database.sqlite3", dbVersion: 1)
         
         // Create Table
         comblite.exec("CREATE TABLE User (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT)")
@@ -46,7 +46,7 @@ class ViewController: UIViewController {
             .sink { completion in
                 switch completion {
                 case .failure(let err):
-                    print("Failed \(err.localizedDescription)")
+                    print("Failed \(err)")
                     break
                 case .finished:
                     print("Table created")
@@ -60,7 +60,7 @@ class ViewController: UIViewController {
             .sink { completion in
                 switch completion {
                 case .failure(let err):
-                    print("Failed \(err.localizedDescription)")
+                    print("Failed \(err)")
                     break
                 case .finished:
                     print("User inserted")
@@ -76,7 +76,7 @@ class ViewController: UIViewController {
             .sink { completion in
                 switch completion {
                 case .failure(let err):
-                    print("Failed \(err.localizedDescription)")
+                    print("Failed \(err)")
                     break
                 case .finished:
                     print("User inserted")
@@ -94,7 +94,7 @@ class ViewController: UIViewController {
             .sink { completion in
                 switch completion {
                 case .failure(let err):
-                    print("Failed \(err.localizedDescription)")
+                    print("Failed \(err)")
                     break
                 case .finished:
                     print("User inserted")
@@ -112,7 +112,7 @@ class ViewController: UIViewController {
             .sink { completion in
                 switch completion {
                 case .failure(let err):
-                    print("Failed \(err.localizedDescription)")
+                    print("Failed \(err)")
                     break
                 case .finished:
                     print("User inserted")
@@ -128,7 +128,7 @@ class ViewController: UIViewController {
             .sink { completion in
                 switch completion {
                 case .failure(let err):
-                    print("Failed \(err.localizedDescription)")
+                    print("Failed \(err)")
                     break
                 case .finished:
                     print("User inserted")
@@ -163,7 +163,7 @@ class CombliteHelper: CombliteDelegate {
         .sink { completion in
             switch completion {
             case .failure(let err):
-                print("Failed \(err.localizedDescription)")
+                print("Failed \(err)")
                 break
             case .finished:
                 print("Table created")
@@ -180,7 +180,7 @@ class CombliteHelper: CombliteDelegate {
                 .sink { completion in
                     switch completion {
                     case .failure(let err):
-                        print("Failed \(err.localizedDescription)")
+                        print("Failed \(err)")
                         break
                     case .finished:
                         print("Table altered")
@@ -192,7 +192,7 @@ class CombliteHelper: CombliteDelegate {
     }
     
     func onError(_ comblite: Comblite, error: CLError) {
-        print("Handle Error Here : \(error.localizedDescription)")
+        print("Handle Error Here : \(error)")
     }
     
     func loadUserList() -> Future<[User], CLError> { comblite.query("SELECT * FROM User") }

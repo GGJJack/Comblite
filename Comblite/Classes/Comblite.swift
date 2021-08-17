@@ -13,10 +13,12 @@ public enum CLError: Error {
 public class Comblite {
     private var dbFilePath: String
     private var delegate: CombliteDelegate? = nil
+    private var userDbVersion: Int64
     
     public init(_ fileName: String, dbVersion: Int64 = 0, delegate: CombliteDelegate? = nil) {
         self.dbFilePath = fileName
         self.delegate = delegate
+        self.userDbVersion = dbVersion
         initializeWithDelegate()
         print("Init Comblite")
     }
@@ -42,14 +44,15 @@ public class Comblite {
             }
         } else {
             delegate.onCreateDatabase(self)
+            self._dbVersion = self.userDbVersion
         }
         
         // Version check
         let hasDbVersion = self._dbVersion
-        print("Old db version : \(hasDbVersion) -> New db version : \(dbVersion)")
-        if hasDbVersion < dbVersion {
-            delegate.onUpgrade(self, oldVersion: hasDbVersion, newVersion: dbVersion)
-            self._dbVersion = dbVersion
+        print("Old db version : \(hasDbVersion) -> New db version : \(userDbVersion)")
+        if hasDbVersion < self.userDbVersion {
+            delegate.onUpgrade(self, oldVersion: hasDbVersion, newVersion: userDbVersion)
+            self._dbVersion = userDbVersion
         }
     }
     
@@ -280,11 +283,17 @@ public class Comblite {
                     
                     var result = [T]()
                     var members = [String]()
+                    var attrs = [String:String?]()
                     var propertiesCount : CUnsignedInt = 0
                     let propertiesInAClass = class_copyPropertyList(T.self, &propertiesCount)
                     for i in 0..<Int(propertiesCount) {
                         guard let property = propertiesInAClass?[i] else { continue }
                         guard let key = NSString(utf8String: property_getName(property)) as String? else { continue }
+                        let attribute = property_getAttributes(property)
+                        if let attribute = attribute {
+                            let attr = String(cString: attribute) // https://stackoverflow.com/questions/20973806/property-getattributes-does-not-make-difference-between-retain-strong-weak-a
+                            attrs[key] = attr.components(separatedBy: ",").first
+                        }
                         members.append(key)
                     }
                     
