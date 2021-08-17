@@ -130,7 +130,7 @@ public class Comblite {
         return nil
     }
     
-    private func getAnyValue(_ op: OpaquePointer?, index: Int32) -> Any? {
+    private func getAnyValue(_ op: OpaquePointer?, index: Int32, type: String?? = nil) -> Any? {
         switch sqlite3_column_type(op, index) {
         case SQLITE_NULL:
             return nil
@@ -302,7 +302,7 @@ public class Comblite {
                         var datas = [String: Any]()
                         for i in 0..<sqlite3_column_count(stmt) {
                             let key = String(cString: sqlite3_column_name(stmt, i))
-                            let value = self?.getAnyValue(stmt, index: i)
+                            let value = self?.getAnyValue(stmt, index: i, type: attrs[key])
                             datas[key] = value
                             
                             if members.contains(key) { // Need object members has objc annotation
