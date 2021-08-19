@@ -4,22 +4,21 @@ import Combine
 import SwiftUI
 
 public enum CLError: Error {
-    case openFailed(msg: String)
-    case bindFailed(msg: String)
-    case queryFailed(msg: String)
-    case unexcepted(msg: String)
+    case openFailed(msg: String, code: Int32? = nil)
+    case bindFailed(msg: String, code: Int32? = nil)
+    case queryFailed(msg: String, code: Int32? = nil)
+    case unexcepted(msg: String, code: Int32? = nil)
 }
 
 public class Comblite {
     private var dbFilePath: String
     private var delegate: CombliteDelegate? = nil
     private var userDbVersion: Int64
+    private var dispatchQueue = DispatchQueue.global(qos: .background)
     
-    public init(_ fileName: String, dbVersion: Int64 = 0, delegate: CombliteDelegate? = nil) {
+    public init(_ fileName: String, dbVersion: Int64 = 0) {
         self.dbFilePath = fileName
-        self.delegate = delegate
         self.userDbVersion = dbVersion
-        initializeWithDelegate()
         print("Init Comblite")
     }
     
@@ -35,7 +34,7 @@ public class Comblite {
     private func initializeWithDelegate() {
         // Initialize Database
         guard let delegate = self.delegate else { return }
-
+        
         let fileMgr = FileManager.default
         var isDir: ObjCBool = false
         if fileMgr.fileExists(atPath: self.dbFilePath, isDirectory: &isDir) {
@@ -87,11 +86,12 @@ public class Comblite {
         get { return self._dbVersion }
     }
     
-    private func bindArguments(op: OpaquePointer?, binds: [Any?]) -> CLError? {
+    private func bindArguments(op: OpaquePointer?, db: OpaquePointer?, binds: [Any?]) -> CLError? {
         
         let errReturn: (OpaquePointer?) -> CLError = { op in
             let err = String(cString: sqlite3_errmsg(op))
-            return CLError.bindFailed(msg: err)
+            let code: Int32 = sqlite3_errcode(db)
+            return CLError.bindFailed(msg: err, code: code)
         }
         for i in 0..<binds.count {
             let pos = Int32(i) + 1
@@ -119,6 +119,8 @@ public class Comblite {
                     guard sqlite3_bind_double(op, pos, bind as! Double) == SQLITE_OK else { return errReturn(op) }
                 } else if type(of: bind) is String.Type {
                     guard sqlite3_bind_text(op, pos, NSString(string: (bind as! String)).utf8String, -1, nil) == SQLITE_OK else { return errReturn(op) }
+                } else if type(of: bind) is Date.Type { // Need Int or Double tpye check
+                    guard sqlite3_bind_int64(op, pos, Int64((bind as! Date).timeIntervalSince1970)) == SQLITE_OK else { return errReturn(op) }
                 } else if type(of: bind) is NSData.Type {
                     let data = bind as! NSData
                     guard sqlite3_bind_blob(op, pos, data.bytes, Int32(data.length), nil) == SQLITE_OK else { return errReturn(op) }
@@ -130,16 +132,115 @@ public class Comblite {
         return nil
     }
     
-    private func getAnyValue(_ op: OpaquePointer?, index: Int32, type: String?? = nil) -> Any? {
+    private func getAnyValue(_ op: OpaquePointer?, index: Int32, type typeOf: String?? = nil) -> Any? {
         switch sqlite3_column_type(op, index) {
         case SQLITE_NULL:
             return nil
         case SQLITE_TEXT:
-            return String(cString: sqlite3_column_text(op, index))
+            let value = String(cString: sqlite3_column_text(op, index))
+            guard let type = typeOf else { return value }
+            switch type {
+            case "Tq": // Int, Int64
+                return Int64(value)
+            case "Tc": // Int8
+                return Int8(value)
+            case "Ts": // Int16
+                return Int16(value)
+            case "Ti": // Int32
+                return Int32(value)
+            case "TQ": // UInt, UInt64
+                return Int64(value)
+            case "TC": // UInt8
+                return Int8(value)
+            case "TS": // UInt16
+                return Int16(value)
+            case "TI": // UInt32
+                return Int32(value)
+            case "Tf": // Float, Float32
+                return Float32(value)
+            case "Td": // Float64
+                return Float64(value)
+            case "TD": // Float80
+                return Float80(value)
+            case "TB": // Bool
+                return Bool(value)
+            case "T@\"NSString\"": // String
+                return value
+            case "T@\"NSDate\"": // String
+                return Date(timeIntervalSince1970: TimeInterval(value)!)
+            default:
+                return value
+            }
         case SQLITE_INTEGER:
-            return sqlite3_column_int64(op, index)
+            let value = sqlite3_column_int64(op, index)
+            guard let type = typeOf else { return value }
+            switch type {
+            case "Tq": // Int, Int64
+                return Int64(value)
+            case "Tc": // Int8
+                return Int8(value)
+            case "Ts": // Int16
+                return Int16(value)
+            case "Ti": // Int32
+                return Int32(value)
+            case "TQ": // UInt, UInt64
+                return Int64(value)
+            case "TC": // UInt8
+                return Int8(value)
+            case "TS": // UInt16
+                return Int16(value)
+            case "TI": // UInt32
+                return Int32(value)
+            case "Tf": // Float, Float32
+                return Float32(value)
+            case "Td": // Float64
+                return Float64(value)
+            case "TD": // Float80
+                return Float80(value)
+            case "TB": // Bool
+                return value != 0
+            case "T@\"NSString\"": // String
+                return String(value)
+            case "T@\"NSDate\"": // String
+                return Date(timeIntervalSince1970: TimeInterval(Int64(value)))
+            default:
+                return value
+            }
         case SQLITE_FLOAT:
-            return sqlite3_column_double(op, index)
+            let value = sqlite3_column_double(op, index)
+            guard let type = typeOf else { return value }
+            switch type {
+            case "Tq": // Int, Int64
+                return Int64(value)
+            case "Tc": // Int8
+                return Int8(value)
+            case "Ts": // Int16
+                return Int16(value)
+            case "Ti": // Int32
+                return Int32(value)
+            case "TQ": // UInt, UInt64
+                return Int64(value)
+            case "TC": // UInt8
+                return Int8(value)
+            case "TS": // UInt16
+                return Int16(value)
+            case "TI": // UInt32
+                return Int32(value)
+            case "Tf": // Float, Float32
+                return Float32(value)
+            case "Td": // Float64
+                return Float64(value)
+            case "TD": // Float80
+                return Float80(value)
+            case "TB": // Bool
+                return value != 0
+            case "T@\"NSString\"": // String
+                return String(value)
+            case "T@\"NSDate\"": // String
+                return Date(timeIntervalSince1970: TimeInterval(value))
+            default:
+                return value
+            }
         case SQLITE_BLOB:
             let len = sqlite3_column_bytes(op, index)
             let point = sqlite3_column_blob(op, index)
@@ -157,7 +258,8 @@ public class Comblite {
         
         let errReturn: (OpaquePointer?) -> CLError = { op in
             let err = String(cString: sqlite3_errmsg(op))
-            return (CLError.openFailed(msg: err))
+            let code: Int32? = sqlite3_errcode(db)
+            return CLError.openFailed(msg: err, code: code)
         }
         
         guard sqlite3_open(self.dbFilePath, &db) == SQLITE_OK else { return errReturn(db) }
@@ -180,6 +282,7 @@ public class Comblite {
         
         var stmt: OpaquePointer? = nil
         guard sqlite3_prepare(db, sql, -1, &stmt, nil) == SQLITE_OK else { return errReturn(db) }
+        sqlite3_reset(stmt)
         defer { sqlite3_finalize(stmt) }
         
         runner(db, stmt)
@@ -189,15 +292,16 @@ public class Comblite {
     
     private func _singleStep(_ sql: String, args: [Any?]? = nil, runner: (OpaquePointer?, OpaquePointer?, CLError?) -> Void) {
         let openError = self._runner(sql) { [weak self] db, stmt in
-            if let args = args, let error = self?.bindArguments(op: stmt, binds: args) {
-                runner(nil, nil, error)
+            if let args = args, let error = self?.bindArguments(op: stmt, db: db, binds: args) {
+                runner(db, nil, error)
             }
             
             if sqlite3_step(stmt) == SQLITE_DONE {
                 runner(db, stmt, nil)
             } else {
                 let err = String(cString: sqlite3_errmsg(stmt))
-                runner(nil, nil, CLError.queryFailed(msg: err))
+                let code: Int32? = sqlite3_errcode(db)
+                runner(db, nil, CLError.queryFailed(msg: err, code: code))
             }
         }
         if let err = openError {
@@ -205,159 +309,177 @@ public class Comblite {
         }
     }
     
-    public func exec(_ sql: String, args: [Any?]? = nil, runThread: DispatchQueue = DispatchQueue.global(qos: .background)) -> Future<Void, CLError> {
-        return Future { [weak self] promise in
-            runThread.async {
-                self?._singleStep(sql, args: args) { _, _, error in
-                    if let err = error {
-                        return promise(.failure(err))
-                    } else {
-                        return promise(.success(()))
-                    }
-                }
-            }
-        }
-    }
-    
-    public func run(_ sql: String, args: [Any?]? = nil, runThread: DispatchQueue = DispatchQueue.global(qos: .background)) -> Future<Int32, CLError> {
-        return Future { [weak self] promise in
-            runThread.async {
-                self?._singleStep(sql, args: args) { db, statement, error in
-                    if let err = error {
-                        return promise(.failure(err))
-                    } else {
-                        promise(.success(sqlite3_total_changes(db)))
-                    }
-                }
-            }
-        }
-    }
-    
-    public func insert(_ sql: String, args: [Any?]? = nil, runThread: DispatchQueue = DispatchQueue.global(qos: .background)) -> Future<Int64, CLError> {
-        return Future { [weak self] promise in
-            runThread.async {
-                self?._singleStep(sql, args: args) { db, statement, error in
-                    if let err = error {
-                        return promise(.failure(err))
-                    } else {
-                        return promise(.success(sqlite3_last_insert_rowid(db)))
-                    }
-                }
-            }
-        }
-    }
-    
-    public func query(_ sql: String, args: [Any?]? = nil, runThread: DispatchQueue = DispatchQueue.global(qos: .background)) -> Future<[[String: Any]], CLError> {
-        return Future { [weak self] promise in
-            runThread.async {
-                let openError = self?._runner(sql) { [weak self] db, stmt in
-                    if let args = args, let error = self?.bindArguments(op: stmt, binds: args) {
-                        return promise(.failure(error))
-                    }
-                    
-                    var result = [[String: Any]]()
-                    
-                    while (sqlite3_step(stmt) == SQLITE_ROW) {
-                        var element = [String: Any]()
-                        for i in 0..<sqlite3_column_count(stmt) {
-                            element[String(cString: sqlite3_column_name(stmt, i))] = self?.getAnyValue(stmt, index: i)
+    public func exec(_ sql: String, args: [Any?]? = nil, runThread: DispatchQueue? = nil) -> AnyPublisher<Void, CLError> {
+        return Deferred {
+            Future { [weak self] promise in
+                (runThread ?? self?.dispatchQueue)?.sync {
+                    self?._singleStep(sql, args: args) { _, _, error in
+                        if let err = error {
+                            return promise(.failure(err))
+                        } else {
+                            return promise(.success(()))
                         }
-                        result.append(element)
                     }
-                    promise(.success(result))
-                }
-                if let err = openError {
-                    promise(.failure(err))
                 }
             }
         }
+        .eraseToAnyPublisher()
     }
     
-    public func query<T: NSObject>(_ sql: String, args: [Any?]? = nil, runThread: DispatchQueue = DispatchQueue.global(qos: .background)) -> Future<[T], CLError> {
-        return Future { [weak self] promise in
-            runThread.async {
-                let openError = self?._runner(sql) { [weak self] db, stmt in
-                    if let args = args, let error = self?.bindArguments(op: stmt, binds: args) {
-                        return promise(.failure(error))
-                    }
-                    
-                    var result = [T]()
-                    var members = [String]()
-                    var attrs = [String:String?]()
-                    var propertiesCount : CUnsignedInt = 0
-                    let propertiesInAClass = class_copyPropertyList(T.self, &propertiesCount)
-                    for i in 0..<Int(propertiesCount) {
-                        guard let property = propertiesInAClass?[i] else { continue }
-                        guard let key = NSString(utf8String: property_getName(property)) as String? else { continue }
-                        let attribute = property_getAttributes(property)
-                        if let attribute = attribute {
-                            let attr = String(cString: attribute) // https://stackoverflow.com/questions/20973806/property-getattributes-does-not-make-difference-between-retain-strong-weak-a
-                            attrs[key] = attr.components(separatedBy: ",").first
+    public func run(_ sql: String, args: [Any?]? = nil, runThread: DispatchQueue? = nil) -> AnyPublisher<Int32, CLError> {
+        return Deferred {
+            Future { [weak self] promise in
+                (runThread ?? self?.dispatchQueue)?.sync {
+                    self?._singleStep(sql, args: args) { db, statement, error in
+                        if let err = error {
+                            return promise(.failure(err))
+                        } else {
+                            promise(.success(sqlite3_total_changes(db)))
                         }
-                        members.append(key)
                     }
-                    
-                    while (sqlite3_step(stmt) == SQLITE_ROW) {
-                        let element = T()
-                        var datas = [String: Any]()
-                        for i in 0..<sqlite3_column_count(stmt) {
-                            let key = String(cString: sqlite3_column_name(stmt, i))
-                            let value = self?.getAnyValue(stmt, index: i, type: attrs[key])
-                            datas[key] = value
-                            
-                            if members.contains(key) { // Need object members has objc annotation
-                                element.setValue(value, forKey: key)
+                }
+            }
+        }
+        .eraseToAnyPublisher()
+    }
+    
+    public func insert(_ sql: String, args: [Any?]? = nil, runThread: DispatchQueue? = nil) -> AnyPublisher<Int64, CLError> {
+        return Deferred {
+            Future { [weak self] promise in
+                (runThread ?? self?.dispatchQueue)?.sync {
+                    self?._singleStep(sql, args: args) { db, statement, error in
+                        if let err = error {
+                            return promise(.failure(err))
+                        } else {
+                            return promise(.success(sqlite3_last_insert_rowid(db)))
+                        }
+                    }
+                }
+            }
+        }
+        .eraseToAnyPublisher()
+    }
+    
+    public func query(_ sql: String, args: [Any?]? = nil, runThread: DispatchQueue? = nil) -> AnyPublisher<[[String: Any]], CLError> {
+        return Deferred {
+            Future { [weak self] promise in
+                (runThread ?? self?.dispatchQueue)?.sync {
+                    let openError = self?._runner(sql) { [weak self] db, stmt in
+                        if let args = args, let error = self?.bindArguments(op: stmt, db: db, binds: args) {
+                            return promise(.failure(error))
+                        }
+                        
+                        var result = [[String: Any]]()
+                        
+                        while (sqlite3_step(stmt) == SQLITE_ROW) {
+                            var element = [String: Any]()
+                            for i in 0..<sqlite3_column_count(stmt) {
+                                element[String(cString: sqlite3_column_name(stmt, i))] = self?.getAnyValue(stmt, index: i)
                             }
+                            result.append(element)
                         }
-                        result.append(element)
+                        promise(.success(result))
                     }
-                    promise(.success(result))
-                }
-                if let err = openError {
-                    promise(.failure(err))
+                    if let err = openError {
+                        promise(.failure(err))
+                    }
                 }
             }
         }
+        .eraseToAnyPublisher()
     }
     
-    public func singleInt(_ sql: String, args: [Any?]? = nil, defaultValue: Int64? = nil, runThread: DispatchQueue = DispatchQueue.global(qos: .background)) -> Future<Int64?, CLError> {
-        return Future { [weak self] promise in
-            runThread.async {
-                let openError = self?._runner(sql) { [weak self] db, stmt in
-                    if let args = args, let error = self?.bindArguments(op: stmt, binds: args) {
-                        return promise(.failure(error))
+    public func query<T: NSObject>(_ sql: String, args: [Any?]? = nil, runThread: DispatchQueue? = nil) -> AnyPublisher<[T], CLError> {
+        return Deferred {
+            Future { [weak self] promise in
+                (runThread ?? self?.dispatchQueue)?.sync(execute: { [weak self] in
+                    let openError = self?._runner(sql) { [weak self] db, stmt in
+                        if let args = args, let error = self?.bindArguments(op: stmt, db: db, binds: args) {
+                            return promise(.failure(error))
+                        }
+
+                        var result = [T]()
+                        var members = [String]()
+                        var attrs = [String:String?]()
+                        var propertiesCount : CUnsignedInt = 0
+                        let propertiesInAClass = class_copyPropertyList(T.self, &propertiesCount)
+                        for i in 0..<Int(propertiesCount) {
+                            guard let property = propertiesInAClass?[i] else { continue }
+                            guard let key = NSString(utf8String: property_getName(property)) as String? else { continue }
+                            let attribute = property_getAttributes(property) // https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/ObjCRuntimeGuide/Articles/ocrtPropertyIntrospection.html#//apple_ref/doc/uid/TP40008048-CH101-SW5
+                            if let attribute = attribute {
+                                let attr = String(cString: attribute) // https://stackoverflow.com/questions/20973806/property-getattributes-does-not-make-difference-between-retain-strong-weak-a
+                                attrs[key] = attr.components(separatedBy: ",").first
+                            }
+                            members.append(key)
+                        }
+
+                        while (sqlite3_step(stmt) == SQLITE_ROW) {
+                            let element = T()
+                            for i in 0..<sqlite3_column_count(stmt) {
+                                let key = String(cString: sqlite3_column_name(stmt, i))
+                                let value = self?.getAnyValue(stmt, index: i, type: attrs[key])
+                                if members.contains(key) { // Need object members has objc annotation
+                                    element.setValue(value, forKey: key)
+                                }
+                            }
+                            result.append(element)
+                        }
+                        promise(.success(result))
                     }
-                    if sqlite3_step(stmt) == SQLITE_ROW {
-                        promise(.success(sqlite3_column_int64(stmt, 1)))
-                    } else {
-                        promise(.success(defaultValue))
+                    if let err = openError {
+                        promise(.failure(err))
                     }
-                }
-                if let err = openError {
-                    promise(.failure(err))
-                }
+                })
             }
         }
+        .eraseToAnyPublisher()
     }
     
-    public func singleString(_ sql: String, args: [Any?]? = nil, defaultValue: String? = nil, runThread: DispatchQueue = DispatchQueue.global(qos: .background)) -> Future<String?, CLError> {
-        return Future { [weak self] promise in
-            runThread.async {
-                let openError = self?._runner(sql) { [weak self] db, stmt in
-                    if let args = args, let error = self?.bindArguments(op: stmt, binds: args) {
-                        return promise(.failure(error))
+    public func singleInt(_ sql: String, args: [Any?]? = nil, defaultValue: Int64? = nil, runThread: DispatchQueue? = nil) -> AnyPublisher<Int64?, CLError> {
+        return Deferred {
+                Future { [weak self] promise in
+                (runThread ?? self?.dispatchQueue)?.sync {
+                    let openError = self?._runner(sql) { [weak self] db, stmt in
+                        if let args = args, let error = self?.bindArguments(op: stmt, db: db, binds: args) {
+                            return promise(.failure(error))
+                        }
+                        if sqlite3_step(stmt) == SQLITE_ROW {
+                            promise(.success(sqlite3_column_int64(stmt, 1)))
+                        } else {
+                            promise(.success(defaultValue))
+                        }
                     }
-                    if sqlite3_step(stmt) == SQLITE_ROW {
-                        promise(.success(String(cString: sqlite3_column_text(stmt, 1))))
-                    } else {
-                        promise(.success(defaultValue))
+                    if let err = openError {
+                        promise(.failure(err))
                     }
-                }
-                if let err = openError {
-                    promise(.failure(err))
                 }
             }
         }
+        .eraseToAnyPublisher()
+    }
+    
+    public func singleString(_ sql: String, args: [Any?]? = nil, defaultValue: String? = nil, runThread: DispatchQueue? = nil) -> AnyPublisher<String?, CLError> {
+        return Deferred {
+            Future { [weak self] promise in
+                (runThread ?? self?.dispatchQueue)?.sync {
+                    let openError = self?._runner(sql) { [weak self] db, stmt in
+                        if let args = args, let error = self?.bindArguments(op: stmt, db: db, binds: args) {
+                            return promise(.failure(error))
+                        }
+                        if sqlite3_step(stmt) == SQLITE_ROW {
+                            promise(.success(String(cString: sqlite3_column_text(stmt, 1))))
+                        } else {
+                            promise(.success(defaultValue))
+                        }
+                    }
+                    if let err = openError {
+                        promise(.failure(err))
+                    }
+                }
+            }
+        }
+        .eraseToAnyPublisher()
     }
 }
 

@@ -28,25 +28,25 @@ pod 'Comblite'
 let comblite = Comblite("path/To/Database.sqlite3")
 
 // Return Nothing
-public func exec(_ sql: String, args: [Any?]? = nil, runThread: DispatchQueue = DispatchQueue.global(qos: .background)) -> Future<Void, CLError> 
+public func exec(_ sql: String, args: [Any?]? = nil, runThread: DispatchQueue = DispatchQueue.global(qos: .background)) -> AnyPublisher<Void, CLError> 
 
 // Return Total Affected rows
-public func run(_ sql: String, args: [Any?]? = nil, runThread: DispatchQueue = DispatchQueue.global(qos: .background)) -> Future<Int32, CLError>
+public func run(_ sql: String, args: [Any?]? = nil, runThread: DispatchQueue = DispatchQueue.global(qos: .background)) -> AnyPublisher<Int32, CLError>
 
 // Return last_insert_rowid
-public func insert(_ sql: String, args: [Any?]? = nil, runThread: DispatchQueue = DispatchQueue.global(qos: .background)) -> Future<Int64, CLError>
+public func insert(_ sql: String, args: [Any?]? = nil, runThread: DispatchQueue = DispatchQueue.global(qos: .background)) -> AnyPublisher<Int64, CLError>
 
 // Return data dictionary
-public func query(_ sql: String, args: [Any?]? = nil, runThread: DispatchQueue = DispatchQueue.global(qos: .background)) -> Future<[[String: Any]], CLError>
+public func query(_ sql: String, args: [Any?]? = nil, runThread: DispatchQueue = DispatchQueue.global(qos: .background)) -> AnyPublisher<[[String: Any]], CLError>
 
 // Return data object
-public func query<T: NSObject>(_ sql: String, args: [Any?]? = nil, runThread: DispatchQueue = DispatchQueue.global(qos: .background)) -> Future<[T], CLError>
+public func query<T: NSObject>(_ sql: String, args: [Any?]? = nil, runThread: DispatchQueue = DispatchQueue.global(qos: .background)) -> AnyPublisher<[T], CLError>
 
 // Return query first value (int)
-public func singleInt(_ sql: String, args: [Any?]? = nil, defaultValue: Int64? = nil, runThread: DispatchQueue = DispatchQueue.global(qos: .background)) -> Future<Int64?, CLError>
+public func singleInt(_ sql: String, args: [Any?]? = nil, defaultValue: Int64? = nil, runThread: DispatchQueue = DispatchQueue.global(qos: .background)) -> AnyPublisher<Int64?, CLError>
 
 // Return query first value (string)
-public func singleString(_ sql: String, args: [Any?]? = nil, defaultValue: String? = nil, runThread: DispatchQueue = DispatchQueue.global(qos: .background)) -> Future<String?, CLError>
+public func singleString(_ sql: String, args: [Any?]? = nil, defaultValue: String? = nil, runThread: DispatchQueue = DispatchQueue.global(qos: .background)) -> AnyPublisher<String?, CLError>
 
 ```
 
@@ -213,7 +213,7 @@ class CombliteHelper: CombliteDelegate {
         let docPathUrl = fileMgr.urls(for: .documentDirectory, in: .userDomainMask).first!
         let path = docPathUrl.appendingPathComponent("Database.sqlite3").path
         
-        comblite = Comblite(path, dbVersion: 1) //Comblite("")
+        comblite = Comblite(path, dbVersion: 1)
         comblite.setDelegate(self)
     }
     
@@ -258,7 +258,7 @@ class CombliteHelper: CombliteDelegate {
         print("Handle Error Here : \(error)")
     }
     
-    func loadUserList() -> Future<[User], CLError> { comblite.query("SELECT * FROM User") }
+    func loadUserList() -> AnyPublisher<[User], CLError> { comblite.query("SELECT * FROM User") }
     
     func insertUser(_ name: String) -> AnyPublisher<User, CLError> {
         return comblite.insert("INSERT INTO User (name) VALUES (?)", args: [name])

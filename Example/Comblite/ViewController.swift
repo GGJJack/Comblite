@@ -150,7 +150,7 @@ class CombliteHelper: CombliteDelegate {
         let docPathUrl = fileMgr.urls(for: .documentDirectory, in: .userDomainMask).first!
         let path = docPathUrl.appendingPathComponent("Database.sqlite3").path
         
-        comblite = Comblite(path, dbVersion: 1) //Comblite("")
+        comblite = Comblite(path, dbVersion: 1)
         comblite.setDelegate(self)
     }
     
@@ -195,7 +195,7 @@ class CombliteHelper: CombliteDelegate {
         print("Handle Error Here : \(error)")
     }
     
-    func loadUserList() -> Future<[User], CLError> { comblite.query("SELECT * FROM User") }
+    func loadUserList() -> AnyPublisher<[User], CLError> { comblite.query("SELECT * FROM User") }
     
     func insertUser(_ name: String) -> AnyPublisher<User, CLError> {
         return comblite.insert("INSERT INTO User (name) VALUES (?)", args: [name])
