@@ -160,8 +160,8 @@ public class Comblite {
                 return Float32(value)
             case "Td": // Float64
                 return Float64(value)
-            // case "TD": // Float80 // Cocoapods error: argument passed to call that takes no arguments
-                // return Float80(value)
+            case "TD": // Float80
+                return Float80(value)
             case "TB": // Bool
                 return Bool(value)
             case "T@\"NSString\"": // String
@@ -195,8 +195,8 @@ public class Comblite {
                 return Float32(value)
             case "Td": // Float64
                 return Float64(value)
-            // case "TD": // Float80 // Cocoapods error: argument passed to call that takes no arguments
-                // return Float80(value)
+            case "TD": // Float80
+                return Float80(value)
             case "TB": // Bool
                 return value != 0
             case "T@\"NSString\"": // String
@@ -230,8 +230,8 @@ public class Comblite {
                 return Float32(value)
             case "Td": // Float64
                 return Float64(value)
-            // case "TD": // Float80 // Cocoapods error: argument passed to call that takes no arguments
-                // return Float80(value)
+            case "TD": // Float80
+                return Float80(value)
             case "TB": // Bool
                 return value != 0
             case "T@\"NSString\"": // String
@@ -265,20 +265,20 @@ public class Comblite {
         guard sqlite3_open(self.dbFilePath, &db) == SQLITE_OK else { return errReturn(db) }
         defer { sqlite3_close(db) } // Think!! Perhaps this line and its parent lines should go to init and deinit.
         
-//        sqlite3_commit_hook(db, { data in
-//            print("Hook!")
-//            print(data)
-//            return 0
-//        }, nil)
-
-//        sqlite3_update_hook(db, { data, action, dbName, tableName, rowId in
-//            print("Update!")
-//            print(data)
-//            print(action) // SQLITE_DELETE, SQLITE_INSERT, SQLITE_UPDATE
-//            print(String(cString: dbName!))
-//            print(String(cString: tableName!))
-//            print(rowId)
-//        }, nil)
+        //        sqlite3_commit_hook(db, { data in
+        //            print("Hook!")
+        //            print(data)
+        //            return 0
+        //        }, nil)
+        
+        //        sqlite3_update_hook(db, { data, action, dbName, tableName, rowId in
+        //            print("Update!")
+        //            print(data)
+        //            print(action) // SQLITE_DELETE, SQLITE_INSERT, SQLITE_UPDATE
+        //            print(String(cString: dbName!))
+        //            print(String(cString: tableName!))
+        //            print(rowId)
+        //        }, nil)
         
         var stmt: OpaquePointer? = nil
         guard sqlite3_prepare(db, sql, -1, &stmt, nil) == SQLITE_OK else { return errReturn(db) }
@@ -397,7 +397,7 @@ public class Comblite {
                         if let args = args, let error = self?.bindArguments(op: stmt, db: db, binds: args) {
                             return promise(.failure(error))
                         }
-
+                        
                         var result = [T]()
                         var members = [String]()
                         var attrs = [String:String?]()
@@ -413,7 +413,7 @@ public class Comblite {
                             }
                             members.append(key)
                         }
-
+                        
                         while (sqlite3_step(stmt) == SQLITE_ROW) {
                             let element = T()
                             for i in 0..<sqlite3_column_count(stmt) {
@@ -438,7 +438,7 @@ public class Comblite {
     
     public func singleInt(_ sql: String, args: [Any?]? = nil, defaultValue: Int64? = nil, runThread: DispatchQueue? = nil) -> AnyPublisher<Int64?, CLError> {
         return Deferred {
-                Future { [weak self] promise in
+            Future { [weak self] promise in
                 (runThread ?? self?.dispatchQueue)?.sync {
                     let openError = self?._runner(sql) { [weak self] db, stmt in
                         if let args = args, let error = self?.bindArguments(op: stmt, db: db, binds: args) {
