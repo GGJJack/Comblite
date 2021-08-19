@@ -160,8 +160,8 @@ public class Comblite {
                 return Float32(value)
             case "Td": // Float64
                 return Float64(value)
-            case "TD": // Float80
-                return Float80(value)
+            // case "TD": // Float80 // Cocoapods error: argument passed to call that takes no arguments
+                // return Float80(value)
             case "TB": // Bool
                 return Bool(value)
             case "T@\"NSString\"": // String
@@ -195,8 +195,8 @@ public class Comblite {
                 return Float32(value)
             case "Td": // Float64
                 return Float64(value)
-            case "TD": // Float80
-                return Float80(value)
+            // case "TD": // Float80 // Cocoapods error: argument passed to call that takes no arguments
+                // return Float80(value)
             case "TB": // Bool
                 return value != 0
             case "T@\"NSString\"": // String
@@ -230,8 +230,8 @@ public class Comblite {
                 return Float32(value)
             case "Td": // Float64
                 return Float64(value)
-            case "TD": // Float80
-                return Float80(value)
+            // case "TD": // Float80 // Cocoapods error: argument passed to call that takes no arguments
+                // return Float80(value)
             case "TB": // Bool
                 return value != 0
             case "T@\"NSString\"": // String
