@@ -159,8 +159,8 @@ public class Comblite {
                 return Float32(value)
             } else if type == Float64.self {
                 return Float64(value)
-            } else if type == Float80.self {
-                return Float80(value)
+            //} else if type == Float80.self {
+            //    return Float80(value)
             } else if type == Double.self {
                 return Double(value)
             } else if type == Bool.self {
@@ -191,8 +191,6 @@ public class Comblite {
                 return Float32(value)
             } else if type == Float64.self {
                 return Float64(value)
-            } else if type == Float80.self {
-                return Float80(value)
             } else if type == Double.self {
                 return Double(value)
             } else if type == Bool.self {
@@ -223,8 +221,6 @@ public class Comblite {
                 return Float32(value)
             } else if type == Float64.self {
                 return Float64(value)
-            } else if type == Float80.self {
-                return Float80(value)
             } else if type == Double.self {
                 return value
             } else if type == Bool.self {
