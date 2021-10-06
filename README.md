@@ -25,6 +25,8 @@ pod 'Comblite'
 
 
 ```swift
+import Combine
+
 let comblite = Comblite("path/To/Database.sqlite3")
 
 // Return Nothing
@@ -40,7 +42,7 @@ public func insert(_ sql: String, args: [Any?]? = nil, runThread: DispatchQueue 
 public func query(_ sql: String, args: [Any?]? = nil, runThread: DispatchQueue = DispatchQueue.global(qos: .background)) -> AnyPublisher<[[String: Any]], CLError>
 
 // Return data object
-public func query<T: NSObject>(_ sql: String, args: [Any?]? = nil, runThread: DispatchQueue = DispatchQueue.global(qos: .background)) -> AnyPublisher<[T], CLError>
+public func query<T: Serializable>(_ sql: String, args: [Any?]? = nil, runThread: DispatchQueue = DispatchQueue.global(qos: .background)) -> AnyPublisher<[T], CLError>
 
 // Return query first value (int)
 public func singleInt(_ sql: String, args: [Any?]? = nil, defaultValue: Int64? = nil, runThread: DispatchQueue = DispatchQueue.global(qos: .background)) -> AnyPublisher<Int64?, CLError>
@@ -124,19 +126,15 @@ comblite.query("SELECT * FROM User")
 
 ### Query Array with object
 
-This method must implement `NSObject` and contain `@objMembers` or `@objc`.
-Return type is `T: NSObject`
+This method must implement `Serializable`.
+Return type is `T: Serializable`
 
 ```swift
-@objcMembers
-class User: NSObject {
+class User: Serializable {
     var id: Int64 = 0
     var name: String? = nil
-}
-// or
-class User: NSObject {
-    @objc var id: Int64 = 0
-    @objc var name: String? = nil
+    
+    required init() {}
 }
 
 comblite.query("SELECT * FROM User")

@@ -1,5 +1,5 @@
 PODS:
-  - Comblite (0.1.0)
+  - Comblite (0.1.2)
 
 DEPENDENCIES:
   - Comblite (from `../`)
@@ -9,8 +9,8 @@ EXTERNAL SOURCES:
     :path: "../"
 
 SPEC CHECKSUMS:
-  Comblite: caf0108f9feb6fc864a99b3414b0f6970f46cd60
+  Comblite: 766d0bb60ab4eb6e904bca1113d006cedce5cb48
 
-PODFILE CHECKSUM: f54284f3d7950261ec825b36132d3cd4820abd7b
+PODFILE CHECKSUM: eee8e2991f19ef11d0f5a477938b169ba6d831ef
 
-COCOAPODS: 1.10.1
+COCOAPODS: 1.11.0.beta.2

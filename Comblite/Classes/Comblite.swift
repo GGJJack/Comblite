@@ -2,12 +2,14 @@
 import SQLite3
 import Combine
 import SwiftUI
+import Foundation
 
 public enum CLError: Error {
     case openFailed(msg: String, code: Int32? = nil)
     case bindFailed(msg: String, code: Int32? = nil)
     case queryFailed(msg: String, code: Int32? = nil)
     case unexcepted(msg: String, code: Int32? = nil)
+    case error(err: Error)
 }
 
 public class Comblite {
@@ -132,113 +134,106 @@ public class Comblite {
         return nil
     }
     
-    private func getAnyValue(_ op: OpaquePointer?, index: Int32, type typeOf: String?? = nil) -> Any? {
+    private func getAnyValue(_ op: OpaquePointer?, index: Int32, type typeOf: Any.Type? = nil) -> Any? {
         switch sqlite3_column_type(op, index) {
         case SQLITE_NULL:
             return nil
         case SQLITE_TEXT:
             let value = String(cString: sqlite3_column_text(op, index))
             guard let type = typeOf else { return value }
-            switch type {
-            case "Tq": // Int, Int64
-                return Int64(value)
-            case "Tc": // Int8
+            if type == Int.self {
+                return Int(value)
+            } else if type == Int8.self {
                 return Int8(value)
-            case "Ts": // Int16
+            } else if type == Int16.self {
                 return Int16(value)
-            case "Ti": // Int32
+            } else if type == Int32.self {
                 return Int32(value)
-            case "TQ": // UInt, UInt64
+            } else if type == Int64.self {
                 return Int64(value)
-            case "TC": // UInt8
-                return Int8(value)
-            case "TS": // UInt16
-                return Int16(value)
-            case "TI": // UInt32
-                return Int32(value)
-            case "Tf": // Float, Float32
+            } else if type == Float.self {
+                return Float(value)
+            // } else if type == Float16.self { // ios14.0 or newer
+            //     return Float16(value)
+            } else if type == Float32.self {
                 return Float32(value)
-            case "Td": // Float64
+            } else if type == Float64.self {
                 return Float64(value)
-            case "TD": // Float80
+            } else if type == Float80.self {
                 return Float80(value)
-            case "TB": // Bool
+            } else if type == Double.self {
+                return Double(value)
+            } else if type == Bool.self {
                 return Bool(value)
-            case "T@\"NSString\"": // String
-                return value
-            case "T@\"NSDate\"": // String
+            } else if type == Date.self {
                 return Date(timeIntervalSince1970: TimeInterval(value)!)
-            default:
+            } else if type == String.self {
+                return value
+            } else {
                 return value
             }
         case SQLITE_INTEGER:
             let value = sqlite3_column_int64(op, index)
             guard let type = typeOf else { return value }
-            switch type {
-            case "Tq": // Int, Int64
-                return Int64(value)
-            case "Tc": // Int8
+            if type == Int.self {
+                return Int(value)
+            } else if type == Int8.self {
                 return Int8(value)
-            case "Ts": // Int16
+            } else if type == Int16.self {
                 return Int16(value)
-            case "Ti": // Int32
+            } else if type == Int32.self {
                 return Int32(value)
-            case "TQ": // UInt, UInt64
+            } else if type == Int64.self {
                 return Int64(value)
-            case "TC": // UInt8
-                return Int8(value)
-            case "TS": // UInt16
-                return Int16(value)
-            case "TI": // UInt32
-                return Int32(value)
-            case "Tf": // Float, Float32
+            } else if type == Float.self {
+                return Float(value)
+            } else if type == Float32.self {
                 return Float32(value)
-            case "Td": // Float64
+            } else if type == Float64.self {
                 return Float64(value)
-            case "TD": // Float80
+            } else if type == Float80.self {
                 return Float80(value)
-            case "TB": // Bool
-                return value != 0
-            case "T@\"NSString\"": // String
-                return String(value)
-            case "T@\"NSDate\"": // String
+            } else if type == Double.self {
+                return Double(value)
+            } else if type == Bool.self {
+                return value == 1
+            } else if type == Date.self {
                 return Date(timeIntervalSince1970: TimeInterval(Int64(value)))
-            default:
+            } else if type == String.self {
+                return value
+            } else {
                 return value
             }
         case SQLITE_FLOAT:
             let value = sqlite3_column_double(op, index)
             guard let type = typeOf else { return value }
-            switch type {
-            case "Tq": // Int, Int64
-                return Int64(value)
-            case "Tc": // Int8
+            if type == Int.self {
+                return Int(value)
+            } else if type == Int8.self {
                 return Int8(value)
-            case "Ts": // Int16
+            } else if type == Int16.self {
                 return Int16(value)
-            case "Ti": // Int32
+            } else if type == Int32.self {
                 return Int32(value)
-            case "TQ": // UInt, UInt64
+            } else if type == Int64.self {
                 return Int64(value)
-            case "TC": // UInt8
-                return Int8(value)
-            case "TS": // UInt16
-                return Int16(value)
-            case "TI": // UInt32
-                return Int32(value)
-            case "Tf": // Float, Float32
+            } else if type == Float.self {
+                return Float(value)
+            } else if type == Float32.self {
                 return Float32(value)
-            case "Td": // Float64
+            } else if type == Float64.self {
                 return Float64(value)
-            case "TD": // Float80
+            } else if type == Float80.self {
                 return Float80(value)
-            case "TB": // Bool
-                return value != 0
-            case "T@\"NSString\"": // String
-                return String(value)
-            case "T@\"NSDate\"": // String
+            } else if type == Double.self {
+                return value
+            } else if type == Bool.self {
+                return value == 1
+            } else if type == Date.self {
                 return Date(timeIntervalSince1970: TimeInterval(value))
-            default:
+            } else if type == String.self {
+                return value
+            } else {
                 return value
             }
         case SQLITE_BLOB:
@@ -389,7 +384,7 @@ public class Comblite {
         .eraseToAnyPublisher()
     }
     
-    public func query<T: NSObject>(_ sql: String, args: [Any?]? = nil, runThread: DispatchQueue? = nil) -> AnyPublisher<[T], CLError> {
+    public func query<T: Serializable>(_ sql: String, args: [Any?]? = nil, runThread: DispatchQueue? = nil) -> AnyPublisher<[T], CLError> {
         return Deferred {
             Future { [weak self] promise in
                 (runThread ?? self?.dispatchQueue)?.sync(execute: { [weak self] in
@@ -398,34 +393,37 @@ public class Comblite {
                             return promise(.failure(error))
                         }
                         
-                        var result = [T]()
-                        var members = [String]()
-                        var attrs = [String:String?]()
-                        var propertiesCount : CUnsignedInt = 0
-                        let propertiesInAClass = class_copyPropertyList(T.self, &propertiesCount)
-                        for i in 0..<Int(propertiesCount) {
-                            guard let property = propertiesInAClass?[i] else { continue }
-                            guard let key = NSString(utf8String: property_getName(property)) as String? else { continue }
-                            let attribute = property_getAttributes(property) // https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/ObjCRuntimeGuide/Articles/ocrtPropertyIntrospection.html#//apple_ref/doc/uid/TP40008048-CH101-SW5
-                            if let attribute = attribute {
-                                let attr = String(cString: attribute) // https://stackoverflow.com/questions/20973806/property-getattributes-does-not-make-difference-between-retain-strong-weak-a
-                                attrs[key] = attr.components(separatedBy: ",").first
-                            }
-                            members.append(key)
-                        }
+                        let object = T()
+                        let reflect = Mirror(reflecting: object.self)
                         
-                        while (sqlite3_step(stmt) == SQLITE_ROW) {
-                            let element = T()
+                        var result = [T]()
+                        var parseError: CLError? = nil
+                        
+                        while (sqlite3_step(stmt) == SQLITE_ROW && parseError == nil) {
+                            var element = [String: Any]()
                             for i in 0..<sqlite3_column_count(stmt) {
                                 let key = String(cString: sqlite3_column_name(stmt, i))
-                                let value = self?.getAnyValue(stmt, index: i, type: attrs[key])
-                                if members.contains(key) { // Need object members has objc annotation
-                                    element.setValue(value, forKey: key)
+                                element[key] = self?.getAnyValue(stmt, index: i)
+                            }
+                            for child in reflect.children {
+                                if !element.contains(where: { $0.key == child.label }) {
+                                    guard let key = child.label else { continue }
+                                    element[key] = child.value
                                 }
                             }
-                            result.append(element)
+                            guard let json = try? JSONSerialization.data(withJSONObject: element, options: .prettyPrinted) else { continue }
+                            do {
+                                let data = try JSONDecoder().decode(T.self, from: json)
+                                result.append(data)
+                            } catch {
+                                parseError = CLError.error(err: error)
+                            }
                         }
-                        promise(.success(result))
+                        if let err = parseError {
+                            promise(.failure(err))
+                        } else {
+                            promise(.success(result))
+                        }
                     }
                     if let err = openError {
                         promise(.failure(err))
@@ -487,6 +485,10 @@ public protocol CombliteDelegate {
     func onCreateDatabase(_ comblite: Comblite)
     func onUpgrade(_ comblite: Comblite, oldVersion: Int64, newVersion: Int64)
     func onError(_ comblite: Comblite, error: CLError)
+}
+
+public protocol Serializable: Codable {
+    init()
 }
 
 //class Comblite_Example {

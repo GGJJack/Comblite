@@ -10,13 +10,12 @@ import UIKit
 import Comblite
 import Combine
 
-@objcMembers
-class User: NSObject {
+class User: Serializable {
     var id: Int64 = 0
     var name: String? = nil
     var profile: String? = nil
     
-    override init() {}
+    required init() {}
     
     init(_ id: Int64, name: String?) {
         self.id = id
