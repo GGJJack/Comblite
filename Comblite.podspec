@@ -8,7 +8,7 @@
 
 Pod::Spec.new do |s|
   s.name             = 'Comblite'
-  s.version          = '0.1.3'
+  s.version          = '0.1.4'
   s.summary          = 'Comblite is Combine + Sqlite wrapping library for Swift.'
   s.swift_version    = '4.0'
 
