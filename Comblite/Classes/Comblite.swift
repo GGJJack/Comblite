@@ -55,6 +55,7 @@ public class Comblite {
             delegate.onUpgrade(self, oldVersion: hasDbVersion, newVersion: userDbVersion)
             self._dbVersion = userDbVersion
         }
+        self.delegate?.onOpenDatabase(self)
     }
     
     private var _dbVersion: Int64 {
@@ -100,7 +101,8 @@ public class Comblite {
             let bindValue = binds[i]
             if let bind = bindValue {
                 if type(of: bind) is Int.Type {
-                    guard sqlite3_bind_int(op, pos, Int32(bind as! Int)) == SQLITE_OK else { return errReturn(op) }
+                    guard sqlite3_bind_int64(op, pos, Int64(bind as! Int)) == SQLITE_OK else { return errReturn(op) }
+//                    guard sqlite3_bind_int(op, pos, Int64(bind as! Int)) == SQLITE_OK else { return errReturn(op) }
                 } else if type(of: bind) is Int8.Type {
                     guard sqlite3_bind_int(op, pos, Int32(bind as! Int8)) == SQLITE_OK else { return errReturn(op) }
                 } else if type(of: bind) is Int16.Type {
@@ -300,6 +302,37 @@ public class Comblite {
         }
     }
     
+    public func execSync(_ sql: String, args: [Any?]? = nil) throws {
+        var db: OpaquePointer? = nil
+        
+        let errReturn: (OpaquePointer?) -> CLError = { op in
+            let err = String(cString: sqlite3_errmsg(op))
+            let code: Int32? = sqlite3_errcode(db)
+            return CLError.openFailed(msg: err, code: code)
+        }
+        
+        guard sqlite3_open(self.dbFilePath, &db) == SQLITE_OK else { throw errReturn(db) }
+        defer { sqlite3_close(db) } // Think!! Perhaps this line and its parent lines should go to init and deinit.
+        
+        var stmt: OpaquePointer? = nil
+        guard sqlite3_prepare(db, sql, -1, &stmt, nil) == SQLITE_OK else { throw errReturn(db) }
+        sqlite3_reset(stmt)
+        defer { sqlite3_finalize(stmt) }
+        
+        if let args = args, let error = self.bindArguments(op: stmt, db: db, binds: args) {
+            throw error
+        }
+        
+        if sqlite3_step(stmt) == SQLITE_DONE {
+            // Do nothing
+            //runner(db, stmt, nil)
+        } else {
+            let err = String(cString: sqlite3_errmsg(stmt))
+            let code: Int32? = sqlite3_errcode(db)
+            throw CLError.queryFailed(msg: err, code: code)
+        }
+    }
+    
     public func exec(_ sql: String, args: [Any?]? = nil, runThread: DispatchQueue? = nil) -> AnyPublisher<Void, CLError> {
         return Deferred {
             Future { [weak self] promise in
@@ -430,6 +463,100 @@ public class Comblite {
         .eraseToAnyPublisher()
     }
     
+    public func queryFirst<T: Serializable>(_ sql: String, args: [Any?]? = nil, runThread: DispatchQueue? = nil) -> AnyPublisher<T?, CLError> {
+        return Deferred {
+            Future { [weak self] promise in
+                (runThread ?? self?.dispatchQueue)?.sync {
+                    let openError = self?._runner(sql) { [weak self] db, stmt in
+                        if let args = args, let error = self?.bindArguments(op: stmt, db: db, binds: args) {
+                            return promise(.failure(error))
+                        }
+                        if sqlite3_step(stmt) == SQLITE_ROW {
+                            let object = T()
+                            let reflect = Mirror(reflecting: object.self)
+                            
+                            var element = [String: Any]()
+                            for i in 0..<sqlite3_column_count(stmt) {
+                                let key = String(cString: sqlite3_column_name(stmt, i))
+                                element[key] = self?.getAnyValue(stmt, index: i)
+                            }
+                            for child in reflect.children {
+                                if !element.contains(where: { $0.key == child.label }) {
+                                    guard let key = child.label else { continue }
+                                    element[key] = child.value
+                                }
+                            }
+                            do {
+                                let json = try JSONSerialization.data(withJSONObject: element, options: .prettyPrinted)
+                                let data = try JSONDecoder().decode(T.self, from: json)
+                                promise(.success(data))
+                            } catch {
+                                promise(.failure(CLError.error(err: error)))
+                            }
+                            
+                        } else {
+                            promise(.success(nil))
+                        }
+                    }
+                    if let err = openError {
+                        promise(.failure(err))
+                    }
+                }
+            }
+        }
+        .eraseToAnyPublisher()
+    }
+    
+    public func queryFirstSync<T: Serializable>(_ sql: String, args: [Any?]? = nil) throws -> T? {
+        var db: OpaquePointer? = nil
+        
+        let errReturn: (OpaquePointer?) -> CLError = { op in
+            let err = String(cString: sqlite3_errmsg(op))
+            let code: Int32? = sqlite3_errcode(db)
+            return CLError.openFailed(msg: err, code: code)
+        }
+        
+        guard sqlite3_open(self.dbFilePath, &db) == SQLITE_OK else { throw errReturn(db) }
+        defer { sqlite3_close(db) } // Think!! Perhaps this line and its parent lines should go to init and deinit.
+        
+        var stmt: OpaquePointer? = nil
+        guard sqlite3_prepare(db, sql, -1, &stmt, nil) == SQLITE_OK else { throw errReturn(db) }
+        sqlite3_reset(stmt)
+        defer { sqlite3_finalize(stmt) }
+        
+        if let args = args, let error = self.bindArguments(op: stmt, db: db, binds: args) {
+            throw error
+        }
+        
+        if sqlite3_step(stmt) == SQLITE_ROW {
+            let object = T()
+            let reflect = Mirror(reflecting: object.self)
+            
+            var element = [String: Any]()
+            for i in 0..<sqlite3_column_count(stmt) {
+                let key = String(cString: sqlite3_column_name(stmt, i))
+                element[key] = self.getAnyValue(stmt, index: i)
+            }
+            for child in reflect.children {
+                if !element.contains(where: { $0.key == child.label }) {
+                    guard let key = child.label else { continue }
+                    element[key] = child.value
+                }
+            }
+            do {
+                let json = try JSONSerialization.data(withJSONObject: element, options: .prettyPrinted)
+                let data = try JSONDecoder().decode(T.self, from: json)
+                return data
+            } catch {
+                throw CLError.error(err: error)
+            }
+        } else {
+            let err = String(cString: sqlite3_errmsg(stmt))
+            let code: Int32? = sqlite3_errcode(db)
+            throw CLError.queryFailed(msg: err, code: code)
+        }
+    }
+    
     public func singleInt(_ sql: String, args: [Any?]? = nil, defaultValue: Int64? = nil, runThread: DispatchQueue? = nil) -> AnyPublisher<Int64?, CLError> {
         return Deferred {
             Future { [weak self] promise in
@@ -451,6 +578,38 @@ public class Comblite {
             }
         }
         .eraseToAnyPublisher()
+    }
+    
+    public func singleIntSync(_ sql: String, args: [Any?]? = nil) throws -> Int64 {
+        var db: OpaquePointer? = nil
+        
+        let errReturn: (OpaquePointer?) -> CLError = { op in
+            let err = String(cString: sqlite3_errmsg(op))
+            let code: Int32? = sqlite3_errcode(db)
+            return CLError.openFailed(msg: err, code: code)
+        }
+        
+        guard sqlite3_open(self.dbFilePath, &db) == SQLITE_OK else { throw errReturn(db) }
+        defer { sqlite3_close(db) } // Think!! Perhaps this line and its parent lines should go to init and deinit.
+        
+        var stmt: OpaquePointer? = nil
+        guard sqlite3_prepare(db, sql, -1, &stmt, nil) == SQLITE_OK else { throw errReturn(db) }
+        sqlite3_reset(stmt)
+        defer { sqlite3_finalize(stmt) }
+        
+        if let args = args, let error = self.bindArguments(op: stmt, db: db, binds: args) {
+            throw error
+        }
+        
+        if sqlite3_step(stmt) == SQLITE_DONE {
+            // Do nothing
+            //runner(db, stmt, nil)
+            return sqlite3_column_int64(stmt, 1)
+        } else {
+            let err = String(cString: sqlite3_errmsg(stmt))
+            let code: Int32? = sqlite3_errcode(db)
+            throw CLError.queryFailed(msg: err, code: code)
+        }
     }
     
     public func singleString(_ sql: String, args: [Any?]? = nil, defaultValue: String? = nil, runThread: DispatchQueue? = nil) -> AnyPublisher<String?, CLError> {
@@ -481,6 +640,7 @@ public protocol CombliteDelegate {
     func onCreateDatabase(_ comblite: Comblite)
     func onUpgrade(_ comblite: Comblite, oldVersion: Int64, newVersion: Int64)
     func onError(_ comblite: Comblite, error: CLError)
+    func onOpenDatabase(_ comblite: Comblite)
 }
 
 public protocol Serializable: Codable {
