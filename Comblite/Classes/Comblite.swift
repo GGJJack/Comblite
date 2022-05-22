@@ -601,10 +601,10 @@ public class Comblite {
             throw error
         }
         
-        if sqlite3_step(stmt) == SQLITE_DONE {
+        if sqlite3_step(stmt) == SQLITE_ROW {
             // Do nothing
             //runner(db, stmt, nil)
-            return sqlite3_column_int64(stmt, 1)
+            return sqlite3_column_int64(stmt, 0)
         } else {
             let err = String(cString: sqlite3_errmsg(stmt))
             let code: Int32? = sqlite3_errcode(db)
@@ -621,7 +621,7 @@ public class Comblite {
                             return promise(.failure(error))
                         }
                         if sqlite3_step(stmt) == SQLITE_ROW {
-                            promise(.success(String(cString: sqlite3_column_text(stmt, 1))))
+                            promise(.success(String(cString: sqlite3_column_text(stmt, 0))))
                         } else {
                             promise(.success(defaultValue))
                         }
