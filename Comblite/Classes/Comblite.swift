@@ -119,6 +119,8 @@ public class Comblite {
                     guard sqlite3_bind_double(op, pos, Double(bind as! Float32)) == SQLITE_OK else { return errReturn(op) }
                 } else if type(of: bind) is Float64.Type {
                     guard sqlite3_bind_double(op, pos, Double(bind as! Float64)) == SQLITE_OK else { return errReturn(op) }
+                } else if type(of: bind) is CGFloat.Type {
+                    guard sqlite3_bind_double(op, pos, Double(bind as! CGFloat)) == SQLITE_OK else { return errReturn(op) }
                 } else if type(of: bind) is Double.Type {
                     guard sqlite3_bind_double(op, pos, bind as! Double) == SQLITE_OK else { return errReturn(op) }
                 } else if type(of: bind) is String.Type {
@@ -566,7 +568,7 @@ public class Comblite {
                             return promise(.failure(error))
                         }
                         if sqlite3_step(stmt) == SQLITE_ROW {
-                            promise(.success(sqlite3_column_int64(stmt, 1)))
+                            promise(.success(sqlite3_column_int64(stmt, 0)))
                         } else {
                             promise(.success(defaultValue))
                         }
